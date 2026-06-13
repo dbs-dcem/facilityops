@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Animated, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useApp } from '@/context/AppContext';
@@ -19,7 +19,7 @@ const FACILITY = 'Naples Edge — Hall B';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { records, startRun, techName, setTechName } = useApp();
+  const { records, completedRuns, startRun, techName, setTechName } = useApp();
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [showTechModal, setShowTechModal] = useState(false);
   const [techDraft, setTechDraft] = useState('');
@@ -49,6 +49,24 @@ export default function HomeScreen() {
 
   const { colors, isDark, toggleTheme } = useTheme();
   const [view, setView] = useState<'system' | 'interval'>('system');
+
+  const escalationCount = useMemo(() => completedRuns.filter(r => r.escalated).length, [completedRuns]);
+  const blinkAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (escalationCount > 0) {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(blinkAnim, { toValue: 0.3, duration: 900, useNativeDriver: true }),
+          Animated.timing(blinkAnim, { toValue: 1,   duration: 900, useNativeDriver: true }),
+        ])
+      );
+      loop.start();
+      return () => loop.stop();
+    } else {
+      blinkAnim.setValue(1);
+    }
+  }, [escalationCount]);
 
   const s = useMemo(() => makeStyles(colors), [colors]);
 
@@ -170,6 +188,24 @@ export default function HomeScreen() {
             onPress={() => router.push({ pathname: '/filter', params: { state: 'all' } })}
           />
         </View>
+
+        {/* escalation tile — slow-blink red, only shown when escalations exist */}
+        {escalationCount > 0 && (
+          <TouchableOpacity onPress={() => router.push('/escalations')} activeOpacity={0.85}>
+            <Animated.View style={[s.escalationTile, { borderColor: colors.hardstop, backgroundColor: 'rgba(255,92,92,0.10)', opacity: blinkAnim }]}>
+              <Text style={[s.escalationGlyph, { color: colors.hardstop }]}>⚑</Text>
+              <View style={s.escalationInfo}>
+                <Text style={[s.escalationCount, { color: colors.hardstop }]}>
+                  {escalationCount} ESCALATED RUN{escalationCount !== 1 ? 'S' : ''}
+                </Text>
+                <Text style={[s.escalationSub, { color: colors.inkDim }]}>
+                  Supervisor action required · tap to review
+                </Text>
+              </View>
+              <Text style={[s.escalationChev, { color: colors.hardstop }]}>›</Text>
+            </Animated.View>
+          </TouchableOpacity>
+        )}
 
         {/* view toggle */}
         <View style={[s.toggle, { backgroundColor: colors.panel, borderColor: colors.line }]}>
@@ -318,6 +354,13 @@ function makeStyles(colors: ColorPalette) {
     facility:  { fontFamily: FONT_MONO, fontSize: 11 },
 
     statRow:   { flexDirection: 'row', gap: 10, marginTop: 16 },
+
+    escalationTile:  { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 2, borderRadius: 14, padding: 16, marginTop: 14 },
+    escalationGlyph: { fontSize: 22, fontWeight: '700' },
+    escalationInfo:  { flex: 1 },
+    escalationCount: { fontFamily: FONT_MONO, fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
+    escalationSub:   { fontSize: 12, marginTop: 2 },
+    escalationChev:  { fontSize: 22 },
 
     toggle:          { flexDirection: 'row', marginTop: 20, borderWidth: 1, borderRadius: 10, padding: 3 },
     toggleBtn:       { flex: 1, paddingVertical: 9, borderRadius: 8, alignItems: 'center' },
