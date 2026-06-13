@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView, Platform, ScrollView,
   StyleSheet, Text, TouchableOpacity, View,
@@ -8,31 +8,37 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Checkpoint } from '@/components/checkpoints';
 import { useApp } from '@/context/AppContext';
-import { COLORS, FONT_MONO } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
+import type { ColorPalette } from '@/context/ThemeContext';
+import { FONT_MONO } from '@/constants/theme';
 import { SYSTEMS } from '@/utils/dueStatus';
 import type { RunEntry } from '@/types';
-
-const KIND_META = {
-  ack:     { label: 'ACKNOWLEDGE', color: COLORS.verify },
-  reading: { label: 'READING',     color: COLORS.caution },
-  photo:   { label: 'PHOTO',       color: COLORS.inkDim },
-  scan:    { label: 'SCAN TAG',    color: COLORS.scan },
-};
 
 export default function RunnerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { records, activeRun, appendEntry, abandonRun } = useApp();
+  const { colors } = useTheme();
 
   const record = records.find(r => r.procedure.id === id);
   const procedure = record?.procedure;
 
   const [stepIdx, setStepIdx] = useState(0);
 
-  if (!procedure || !activeRun) {
-    router.replace('/');
-    return null;
-  }
+  const s = useMemo(() => makeStyles(colors), [colors]);
+
+  const KIND_META = useMemo(() => ({
+    ack:     { label: 'ACKNOWLEDGE', color: colors.verify },
+    reading: { label: 'READING',     color: colors.caution },
+    photo:   { label: 'PHOTO',       color: colors.inkDim },
+    scan:    { label: 'SCAN TAG',    color: colors.scan },
+  }), [colors]);
+
+  useEffect(() => {
+    if (!procedure || !activeRun) router.replace('/');
+  }, [procedure, activeRun]);
+
+  if (!procedure || !activeRun) return null;
 
   const steps = procedure.steps;
   const step  = steps[stepIdx];
@@ -115,34 +121,36 @@ export default function RunnerScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.bg },
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.bg },
 
-  header:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 18, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: COLORS.line, backgroundColor: COLORS.panel },
-  exitBtn:     { color: COLORS.inkFaint, fontFamily: FONT_MONO, fontSize: 12 },
-  stepCounter: { color: COLORS.inkDim,   fontFamily: FONT_MONO, fontSize: 11, letterSpacing: 1 },
+    header:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 18, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.line, backgroundColor: colors.panel },
+    exitBtn:     { color: colors.inkFaint, fontFamily: FONT_MONO, fontSize: 12 },
+    stepCounter: { color: colors.inkDim,   fontFamily: FONT_MONO, fontSize: 11, letterSpacing: 1 },
 
-  taskInfo:  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 18, paddingTop: 11, backgroundColor: COLORS.panel },
-  sysGlyph:  { fontSize: 12 },
-  taskTitle: { flex: 1, color: COLORS.ink, fontSize: 13.5, fontWeight: '600', lineHeight: 19, paddingBottom: 11 },
+    taskInfo:  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 18, paddingTop: 11, backgroundColor: colors.panel },
+    sysGlyph:  { fontSize: 12 },
+    taskTitle: { flex: 1, color: colors.ink, fontSize: 13.5, fontWeight: '600', lineHeight: 19, paddingBottom: 11 },
 
-  progressTrack: { height: 4, backgroundColor: COLORS.bg },
-  progressFill:  { height: 4, backgroundColor: COLORS.verify },
+    progressTrack: { height: 4, backgroundColor: colors.bg },
+    progressFill:  { height: 4, backgroundColor: colors.verify },
 
-  body:        { flex: 1 },
-  bodyContent: { padding: 20, paddingTop: 24 },
+    body:        { flex: 1 },
+    bodyContent: { padding: 20, paddingTop: 24 },
 
-  badges:        { flexDirection: 'row', gap: 8 },
-  badge:         { borderWidth: 1, borderRadius: 5, paddingHorizontal: 8, paddingVertical: 3 },
-  badgeText:     { fontFamily: FONT_MONO, fontSize: 11, letterSpacing: 1.5 },
-  hardBadge:     { borderRadius: 5, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: 'rgba(255,92,92,0.12)' },
-  hardBadgeText: { fontFamily: FONT_MONO, fontSize: 11, letterSpacing: 1.5, color: COLORS.hardstop },
+    badges:        { flexDirection: 'row', gap: 8 },
+    badge:         { borderWidth: 1, borderRadius: 5, paddingHorizontal: 8, paddingVertical: 3 },
+    badgeText:     { fontFamily: FONT_MONO, fontSize: 11, letterSpacing: 1.5 },
+    hardBadge:     { borderRadius: 5, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: 'rgba(255,92,92,0.12)' },
+    hardBadgeText: { fontFamily: FONT_MONO, fontSize: 11, letterSpacing: 1.5, color: colors.hardstop },
 
-  stepTitle:      { color: COLORS.ink,    fontSize: 22, fontWeight: '700', lineHeight: 28, marginTop: 15, letterSpacing: -0.3 },
-  stepDetail:     { color: COLORS.inkDim, fontSize: 14.5, lineHeight: 22, marginTop: 11 },
-  checkpointArea: { marginTop: 24 },
+    stepTitle:      { color: colors.ink,    fontSize: 22, fontWeight: '700', lineHeight: 28, marginTop: 15, letterSpacing: -0.3 },
+    stepDetail:     { color: colors.inkDim, fontSize: 14.5, lineHeight: 22, marginTop: 11 },
+    checkpointArea: { marginTop: 24 },
 
-  footer:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingVertical: 14 },
-  backBtn:     { color: COLORS.inkFaint, fontFamily: FONT_MONO, fontSize: 12 },
-  skipDisabled: { color: COLORS.inkFaint, fontFamily: FONT_MONO, fontSize: 11 },
-});
+    footer:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingVertical: 14 },
+    backBtn:     { color: colors.inkFaint, fontFamily: FONT_MONO, fontSize: 12 },
+    skipDisabled: { color: colors.inkFaint, fontFamily: FONT_MONO, fontSize: 11 },
+  });
+}

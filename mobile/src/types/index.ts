@@ -60,3 +60,13 @@ export interface DueStatus {
   state: DueState;
   remaining: number;
 }
+
+export interface CompletedRunRecord {
+  id: string;
+  procedureId: string;
+  procedureTitle: string;
+  completedAt: Date;
+  durationMins: number;
+  flaggedCount: number;
+  log: RunEntry[];
+}
