@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useApp } from '@/context/AppContext';
@@ -19,8 +19,11 @@ const FACILITY = 'Naples Edge — Hall B';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { records, startRun } = useApp();
+  const { records, startRun, techName, setTechName } = useApp();
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [showTechModal, setShowTechModal] = useState(false);
+  const [techDraft, setTechDraft] = useState('');
+  const techInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_KEY).then(val => {
@@ -31,6 +34,19 @@ export default function HomeScreen() {
       }
     }).catch(() => setOnboardingChecked(true));
   }, []);
+
+  const openTechModal = () => {
+    setTechDraft(techName);
+    setShowTechModal(true);
+    setTimeout(() => techInputRef.current?.focus(), 150);
+  };
+
+  const saveTech = () => {
+    const trimmed = techDraft.trim();
+    if (trimmed) setTechName(trimmed);
+    setShowTechModal(false);
+  };
+
   const { colors, isDark, toggleTheme } = useTheme();
   const [view, setView] = useState<'system' | 'interval'>('system');
 
@@ -74,6 +90,8 @@ export default function HomeScreen() {
     router.push(`/run/${procedureId}`);
   };
 
+  const techInitials = techName.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase() || 'FT';
+
   return (
     <SafeAreaView style={s.root}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
@@ -85,13 +103,51 @@ export default function HomeScreen() {
             <Text style={[s.brandName, { color: colors.ink }]}>FacilityOps</Text>
             <Text style={[s.brandSub, { color: colors.inkFaint }]}>MOP RUNNER</Text>
           </View>
-          <TouchableOpacity onPress={toggleTheme} hitSlop={12} style={s.themeBtn}>
-            <Text style={[s.themeBtnText, { color: colors.inkDim }]}>{isDark ? '◑' : '◐'}</Text>
+
+          {/* technician badge */}
+          <TouchableOpacity onPress={openTechModal} hitSlop={8} style={[s.techBadge, { backgroundColor: colors.panelHi, borderColor: colors.line }]}>
+            <Text style={[s.techInitials, { color: colors.inkDim }]}>{techInitials}</Text>
           </TouchableOpacity>
+
+          {/* theme toggle */}
+          <TouchableOpacity onPress={toggleTheme} hitSlop={8} style={s.themeBtn}>
+            <Text style={[s.themeBtnText, { color: colors.inkDim }]}>{isDark ? '◑' : '◐'}</Text>
+            <Text style={[s.themeBtnLabel, { color: colors.inkFaint }]}>{isDark ? 'DARK' : 'LIGHT'}</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity onPress={() => router.push('/help')} hitSlop={12} style={s.helpBtn}>
             <Text style={[s.helpBtnText, { color: colors.inkDim }]}>?</Text>
           </TouchableOpacity>
         </View>
+
+        {/* technician name modal */}
+        <Modal visible={showTechModal} transparent animationType="fade" onRequestClose={() => setShowTechModal(false)}>
+          <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setShowTechModal(false)}>
+            <TouchableOpacity activeOpacity={1} style={[s.modalCard, { backgroundColor: colors.panel, borderColor: colors.line }]} onPress={() => {}}>
+              <Text style={[s.modalTitle, { color: colors.ink }]}>Technician Name</Text>
+              <Text style={[s.modalSub, { color: colors.inkDim }]}>Stamped on every completed run record.</Text>
+              <TextInput
+                ref={techInputRef}
+                style={[s.modalInput, { color: colors.ink, borderColor: colors.line, backgroundColor: colors.panelHi }]}
+                value={techDraft}
+                onChangeText={setTechDraft}
+                placeholder="e.g. J. Ramirez"
+                placeholderTextColor={colors.inkFaint}
+                returnKeyType="done"
+                onSubmitEditing={saveTech}
+                autoCapitalize="words"
+              />
+              <View style={s.modalBtns}>
+                <TouchableOpacity onPress={() => setShowTechModal(false)} style={[s.modalCancelBtn, { borderColor: colors.line }]}>
+                  <Text style={[s.modalCancelText, { color: colors.inkDim }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={saveTech} style={[s.modalSaveBtn, { backgroundColor: colors.verify }]}>
+                  <Text style={s.modalSaveText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
 
         {/* header */}
         <View style={s.headerRow}>
@@ -237,10 +293,25 @@ function makeStyles(colors: ColorPalette) {
     brandText: { flex: 1 },
     brandName: { fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
     brandSub:  { fontSize: 10.5, fontFamily: FONT_MONO, letterSpacing: 1 },
-    themeBtn:      { padding: 6 },
-    themeBtnText:  { fontSize: 20 },
+    techBadge:    { width: 30, height: 30, borderRadius: 15, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+    techInitials: { fontFamily: FONT_MONO, fontSize: 11, fontWeight: '700' },
+
+    themeBtn:      { alignItems: 'center', gap: 1, padding: 4 },
+    themeBtnText:  { fontSize: 18 },
+    themeBtnLabel: { fontFamily: FONT_MONO, fontSize: 8, letterSpacing: 0.5 },
     helpBtn:       { width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
     helpBtnText:   { fontSize: 14, fontWeight: '700', fontFamily: FONT_MONO },
+
+    modalOverlay:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+    modalCard:     { width: '100%', borderRadius: 18, borderWidth: 1, padding: 24 },
+    modalTitle:    { fontSize: 18, fontWeight: '700', marginBottom: 6 },
+    modalSub:      { fontSize: 13, lineHeight: 20, marginBottom: 20 },
+    modalInput:    { borderWidth: 1, borderRadius: 10, padding: 14, fontSize: 16, fontFamily: FONT_MONO, marginBottom: 20 },
+    modalBtns:     { flexDirection: 'row', gap: 10 },
+    modalCancelBtn:{ flex: 1, borderWidth: 1, borderRadius: 10, padding: 14, alignItems: 'center' },
+    modalCancelText:{ fontSize: 15, fontWeight: '600' },
+    modalSaveBtn:  { flex: 1, borderRadius: 10, padding: 14, alignItems: 'center' },
+    modalSaveText: { fontSize: 15, fontWeight: '700', color: '#06140E' },
 
     headerRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 22 },
     heading:   { fontSize: 21, fontWeight: '700', letterSpacing: -0.3 },

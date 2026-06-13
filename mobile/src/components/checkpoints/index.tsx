@@ -30,28 +30,88 @@ function ProceedButton({ enabled, label = 'Verify & continue', color = COLORS.ve
 }
 
 // ─── Ack ─────────────────────────────────────────────────────────────────────
+// PASS records the ackLabel (flagged: false).
+// FAIL records "FAILED — <ackLabel>" (flagged: true).
+// Hard checkpoints block on FAIL — the tech must resolve the issue, not proceed.
+
+type AckOutcome = 'none' | 'pass' | 'fail';
 
 function AckCheckpoint({ step, onComplete }: { step: AckStep; onComplete: (e: RunEntry) => void }) {
   const { colors } = useTheme();
-  const [checked, setChecked] = useState(false);
+  const [outcome, setOutcome] = useState<AckOutcome>('none');
+  const isHard = step.hard;
+
+  const canProceed = outcome === 'pass' || (outcome === 'fail' && !isHard);
+
   return (
     <View>
-      <TouchableOpacity
-        style={[
-          { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, borderRadius: 12, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.panel },
-          checked && { backgroundColor: 'rgba(61,220,151,0.10)', borderColor: colors.verify },
-        ]}
-        onPress={() => setChecked(v => !v)}
-        activeOpacity={0.8}
-      >
-        <View style={[s.checkbox, checked && s.checkboxChecked]}>
-          {checked && <Text style={s.checkmark}>✓</Text>}
+      {/* PASS / FAIL selector */}
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <TouchableOpacity
+          style={[
+            s.outcomeBtn,
+            { borderColor: outcome === 'pass' ? colors.verify : colors.line, backgroundColor: colors.panel },
+            outcome === 'pass' && { backgroundColor: 'rgba(61,220,151,0.10)', borderColor: colors.verify },
+          ]}
+          onPress={() => setOutcome(v => v === 'pass' ? 'none' : 'pass')}
+          activeOpacity={0.8}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <View style={[s.outcomeCircle, { borderColor: outcome === 'pass' ? colors.verify : colors.inkFaint }, outcome === 'pass' && { backgroundColor: colors.verify }]}>
+              {outcome === 'pass' && <Text style={s.outcomeTick}>✓</Text>}
+            </View>
+            <Text style={[s.outcomeTag, { color: outcome === 'pass' ? colors.verify : colors.inkDim }]}>PASS</Text>
+          </View>
+          <Text style={[s.ackLabel, { color: outcome === 'pass' ? colors.ink : colors.inkDim }]}>{step.ackLabel}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            s.outcomeBtn, s.outcomeBtnFail,
+            { borderColor: outcome === 'fail' ? colors.hardstop : colors.line, backgroundColor: colors.panel },
+            outcome === 'fail' && { backgroundColor: 'rgba(255,92,92,0.08)', borderColor: colors.hardstop },
+          ]}
+          onPress={() => setOutcome(v => v === 'fail' ? 'none' : 'fail')}
+          activeOpacity={0.8}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <View style={[s.outcomeCircle, { borderColor: outcome === 'fail' ? colors.hardstop : colors.inkFaint }, outcome === 'fail' && { backgroundColor: colors.hardstop }]}>
+              {outcome === 'fail' && <Text style={s.outcomeTick}>✗</Text>}
+            </View>
+            <Text style={[s.outcomeTag, { color: outcome === 'fail' ? colors.hardstop : colors.inkDim }]}>FAIL</Text>
+          </View>
+          <Text style={[s.ackFailHint, { color: outcome === 'fail' ? colors.hardstop : colors.inkFaint }]}>
+            {isHard ? 'Resolve before\ncontinuing' : 'Log failure &\ncontinue'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {outcome === 'fail' && isHard && (
+        <View style={[s.hardWarn, { borderColor: colors.hardstop, backgroundColor: 'rgba(255,92,92,0.08)' }]}>
+          <Text style={[s.hardWarnText, { color: colors.hardstop }]}>
+            ⚑ HARD CHECKPOINT — this step must be resolved before you can proceed. Escalate per your facility incident procedure.
+          </Text>
         </View>
-        <Text style={[s.ackLabel, { color: checked ? colors.ink : colors.inkDim }]}>{step.ackLabel}</Text>
-      </TouchableOpacity>
+      )}
+
       <ProceedButton
-        enabled={checked}
-        onPress={() => onComplete({ stepId: step.id, stepTitle: step.title, kind: 'ack', value: step.ackLabel, flagged: false, ts: new Date() })}
+        enabled={canProceed}
+        label={
+          outcome === 'fail'
+            ? 'Log failure & continue'
+            : outcome === 'pass'
+            ? 'Confirmed — continue'
+            : 'Select outcome above'
+        }
+        color={outcome === 'fail' ? colors.caution : colors.verify}
+        onPress={() => onComplete({
+          stepId: step.id,
+          stepTitle: step.title,
+          kind: 'ack',
+          value: outcome === 'pass' ? step.ackLabel : `FAILED — ${step.ackLabel}`,
+          flagged: outcome === 'fail',
+          ts: new Date(),
+        })}
       />
     </View>
   );
@@ -202,10 +262,16 @@ const s = StyleSheet.create({
   proceed:     { padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 20 },
   proceedText: { color: '#06140E', fontSize: 15, fontWeight: '700' },
 
-  checkbox:        { width: 26, height: 26, borderRadius: 7, borderWidth: 2, borderColor: '#54626D', alignItems: 'center', justifyContent: 'center' },
-  checkboxChecked: { backgroundColor: COLORS.verify, borderColor: COLORS.verify },
-  checkmark:     { color: '#06140E', fontSize: 15, fontWeight: '800' },
-  ackLabel:      { flex: 1, fontSize: 15, fontWeight: '500' },
+  outcomeBtn:      { flex: 1, padding: 16, borderRadius: 12, borderWidth: 1 },
+  outcomeBtnFail:  { flex: 0.6 },
+  outcomeCircle:   { width: 22, height: 22, borderRadius: 11, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  outcomeTick:     { color: '#06140E', fontSize: 11, fontWeight: '800' },
+  outcomeTag:      { fontFamily: FONT_MONO, fontSize: 11, letterSpacing: 1.5, fontWeight: '700' },
+  ackLabel:        { fontSize: 14, fontWeight: '500', lineHeight: 20 },
+  ackFailHint:     { fontSize: 12, fontFamily: FONT_MONO, lineHeight: 18 },
+
+  hardWarn:     { borderWidth: 1, borderRadius: 10, padding: 14, marginTop: 14 },
+  hardWarnText: { fontSize: 13, lineHeight: 20, fontWeight: '500' },
 
   rangeHint:    { fontFamily: FONT_MONO, fontSize: 12, marginTop: 10 },
 

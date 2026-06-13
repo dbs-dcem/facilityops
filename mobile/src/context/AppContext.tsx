@@ -20,15 +20,17 @@ interface State {
   activeRun: ActiveRun | null;
   completedRuns: CompletedRunRecord[];
   customProcedures: Procedure[];
+  techName: string;
 }
 
 type Action =
-  | { type: 'HYDRATE'; completions: Record<string, string | null>; completedRuns: CompletedRunRecord[]; customProcedures: Procedure[] }
+  | { type: 'HYDRATE'; completions: Record<string, string | null>; completedRuns: CompletedRunRecord[]; customProcedures: Procedure[]; techName: string | null }
   | { type: 'START_RUN'; procedureId: string }
   | { type: 'APPEND_ENTRY'; entry: RunEntry }
   | { type: 'COMPLETE_RUN' }
   | { type: 'ABANDON_RUN' }
-  | { type: 'ADD_PROCEDURE'; procedure: Procedure };
+  | { type: 'ADD_PROCEDURE'; procedure: Procedure }
+  | { type: 'SET_TECH'; name: string };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -37,6 +39,7 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         customProcedures: action.customProcedures,
+        techName: action.techName ?? state.techName,
         // keep sample runs if nothing has been persisted yet (first launch)
         completedRuns: action.completedRuns.length > 0 ? action.completedRuns : SAMPLE_RUNS,
         records: allProcedures.map(procedure => ({
@@ -66,6 +69,7 @@ function reducer(state: State, action: Action): State {
         durationMins,
         flaggedCount: activeRun.log.filter(e => e.flagged).length,
         log: activeRun.log,
+        techName: state.techName,
       };
       return {
         ...state,
@@ -84,6 +88,8 @@ function reducer(state: State, action: Action): State {
         customProcedures: [...state.customProcedures, action.procedure],
         records: [...state.records, { procedure: action.procedure, lastCompletedAt: null }],
       };
+    case 'SET_TECH':
+      return { ...state, techName: action.name };
     default:
       return state;
   }
@@ -93,11 +99,13 @@ interface ContextValue {
   records: ProcedureRecord[];
   activeRun: ActiveRun | null;
   completedRuns: CompletedRunRecord[];
+  techName: string;
   startRun: (procedureId: string) => void;
   appendEntry: (entry: RunEntry) => void;
   completeRun: () => void;
   abandonRun: () => void;
   addProcedure: (procedure: Procedure) => void;
+  setTechName: (name: string) => void;
 }
 
 const AppContext = createContext<ContextValue | null>(null);
@@ -109,6 +117,7 @@ const initialState: State = {
   activeRun: null,
   completedRuns: SAMPLE_RUNS,
   customProcedures: [],
+  techName: 'Field Technician',
 };
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -120,13 +129,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.getItem(STORAGE_KEY)
       .then(raw => {
         if (raw) {
-          const { completions = {}, completedRuns: rawRuns = [], customProcedures: rawProcs = [] } = JSON.parse(raw);
+          const { completions = {}, completedRuns: rawRuns = [], customProcedures: rawProcs = [], techName = null } = JSON.parse(raw);
           const restoredRuns: CompletedRunRecord[] = rawRuns.map((r: any) => ({
             ...r,
             completedAt: new Date(r.completedAt),
             log: r.log.map((e: any) => ({ ...e, ts: new Date(e.ts) })),
           }));
-          dispatch({ type: 'HYDRATE', completions, completedRuns: restoredRuns, customProcedures: rawProcs });
+          dispatch({ type: 'HYDRATE', completions, completedRuns: restoredRuns, customProcedures: rawProcs, techName });
         }
       })
       .catch(() => {})
@@ -148,9 +157,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         log: r.log.map(e => ({ ...e, ts: e.ts.toISOString() })),
       })),
       customProcedures: state.customProcedures,
+      techName: state.techName,
     };
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data)).catch(() => {});
-  }, [state.records, state.completedRuns, state.customProcedures, hydrated]);
+  }, [state.records, state.completedRuns, state.customProcedures, state.techName, hydrated]);
 
   if (!hydrated) return null;
 
@@ -159,11 +169,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       records:      state.records,
       activeRun:    state.activeRun,
       completedRuns: state.completedRuns,
+      techName:     state.techName,
       startRun:     (procedureId) => dispatch({ type: 'START_RUN', procedureId }),
       appendEntry:  (entry)       => dispatch({ type: 'APPEND_ENTRY', entry }),
       completeRun:  ()            => dispatch({ type: 'COMPLETE_RUN' }),
       abandonRun:   ()            => dispatch({ type: 'ABANDON_RUN' }),
       addProcedure: (procedure)   => dispatch({ type: 'ADD_PROCEDURE', procedure }),
+      setTechName:  (name)        => dispatch({ type: 'SET_TECH', name }),
     }}>
       {children}
     </AppContext.Provider>
