@@ -1,0 +1,39 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: azure-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Build the deploy zip from the backend directory.
+      # Oryx will install requirements.txt on the App Service side
+      # (SCM_DO_BUILD_DURING_DEPLOYMENT=true), so we don't ship a venv.
+      - name: Package backend
+        run: |
+          cd backend
+          zip -r /tmp/deploy.zip . \
+            -x "__pycache__/*" \
+            -x "*.pyc" \
+            -x ".env" \
+            -x "*.egg-info/*"
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: /tmp/deploy.zip
