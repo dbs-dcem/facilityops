@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useReducer, useRef, useState } from 'react';
 import { CATALOG, seedLastCompleted } from '../data/catalog';
+import { SAMPLE_RUNS } from '../data/sampleRuns';
 import type { CompletedRunRecord, Procedure, RunEntry } from '../types';
 
 export interface ProcedureRecord {
@@ -36,7 +37,8 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         customProcedures: action.customProcedures,
-        completedRuns: action.completedRuns,
+        // keep sample runs if nothing has been persisted yet (first launch)
+        completedRuns: action.completedRuns.length > 0 ? action.completedRuns : SAMPLE_RUNS,
         records: allProcedures.map(procedure => ({
           procedure,
           lastCompletedAt: action.completions[procedure.id]
@@ -105,7 +107,7 @@ const STORAGE_KEY = 'facilityops:v1';
 const initialState: State = {
   records: CATALOG.map(procedure => ({ procedure, lastCompletedAt: seedLastCompleted(procedure.id) })),
   activeRun: null,
-  completedRuns: [],
+  completedRuns: SAMPLE_RUNS,
   customProcedures: [],
 };
 

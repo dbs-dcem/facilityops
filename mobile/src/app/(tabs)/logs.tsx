@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +15,7 @@ const KIND_COLOR: Record<RunEntry['kind'], keyof ColorPalette> = {
 };
 
 export default function LogsScreen() {
+  const router = useRouter();
   const { completedRuns } = useApp();
   const { colors } = useTheme();
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -48,6 +50,7 @@ export default function LogsScreen() {
               expanded={expanded}
               colors={colors}
               onToggle={() => setExpandedId(expanded ? null : run.id)}
+              onViewReport={() => router.push(`/report/${run.id}`)}
             />
           );
         })}
@@ -58,11 +61,12 @@ export default function LogsScreen() {
 
 // ─── RunCard ─────────────────────────────────────────────────────────────────
 
-function RunCard({ run, expanded, colors, onToggle }: {
+function RunCard({ run, expanded, colors, onToggle, onViewReport }: {
   run: CompletedRunRecord;
   expanded: boolean;
   colors: ColorPalette;
   onToggle: () => void;
+  onViewReport: () => void;
 }) {
   const s = useMemo(() => makeStyles(colors), [colors]);
   const completedDate = run.completedAt.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
@@ -87,7 +91,12 @@ function RunCard({ run, expanded, colors, onToggle }: {
 
       {expanded && (
         <View style={s.trailBox}>
-          <Text style={s.trailHeading}>AUDIT TRAIL</Text>
+          <View style={s.trailHeader}>
+            <Text style={s.trailHeading}>AUDIT TRAIL</Text>
+            <TouchableOpacity onPress={onViewReport} hitSlop={8} style={s.reportBtn}>
+              <Text style={s.reportBtnText}>View Report ↗</Text>
+            </TouchableOpacity>
+          </View>
           {run.log.map((entry, i) => (
             <View key={i} style={[s.trailRow, i < run.log.length - 1 && s.trailRowBorder]}>
               <Text style={[s.trailGlyph, { color: colors[KIND_COLOR[entry.kind]] as string }]}>
@@ -104,6 +113,12 @@ function RunCard({ run, expanded, colors, onToggle }: {
               </Text>
             </View>
           ))}
+          {run.techName && (
+            <View style={s.techRow}>
+              <Text style={s.techLabel}>TECHNICIAN</Text>
+              <Text style={s.techName}>{run.techName}</Text>
+            </View>
+          )}
         </View>
       )}
     </TouchableOpacity>
@@ -142,7 +157,13 @@ function makeStyles(colors: ColorPalette) {
     statRow:  { flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 12 },
 
     trailBox:     { marginTop: 14, borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 12 },
-    trailHeading: { color: colors.inkFaint, fontFamily: FONT_MONO, fontSize: 10, letterSpacing: 1.5, marginBottom: 8 },
+    trailHeader:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+    trailHeading: { color: colors.inkFaint, fontFamily: FONT_MONO, fontSize: 10, letterSpacing: 1.5 },
+    reportBtn:    { borderWidth: 1, borderColor: colors.verify, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+    reportBtnText:{ color: colors.verify, fontFamily: FONT_MONO, fontSize: 10 },
+    techRow:      { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.line },
+    techLabel:    { color: colors.inkFaint, fontFamily: FONT_MONO, fontSize: 10, letterSpacing: 1 },
+    techName:     { color: colors.inkDim, fontFamily: FONT_MONO, fontSize: 11 },
     trailRow:     { flexDirection: 'row', gap: 10, paddingVertical: 8 },
     trailRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.line },
     trailGlyph:   { fontFamily: FONT_MONO, fontSize: 13, width: 16, textAlign: 'center' },

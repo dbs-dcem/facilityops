@@ -26,6 +26,12 @@ export interface Asset {
   location: string;
 }
 
+export interface ComplianceRef {
+  standard: string;
+  section: string;
+  summary: string;
+}
+
 export interface Procedure {
   id: string;
   title: string;
@@ -35,6 +41,7 @@ export interface Procedure {
   riskStatement: string;
   version: number;
   steps: Step[];
+  complianceRefs?: ComplianceRef[];
 }
 
 export interface Run {
@@ -69,4 +76,5 @@ export interface CompletedRunRecord {
   durationMins: number;
   flaggedCount: number;
   log: RunEntry[];
+  techName?: string;
 }
