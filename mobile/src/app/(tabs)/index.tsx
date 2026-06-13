@@ -1,5 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -12,12 +13,24 @@ import {
   INTERVAL_LABEL, INTERVAL_ORDER, STATUS_META, SYSTEMS,
   dueLabel, statusFor,
 } from '@/utils/dueStatus';
+import { ONBOARDING_KEY } from '../onboarding';
 
 const FACILITY = 'Naples Edge — Hall B';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { records, startRun } = useApp();
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(ONBOARDING_KEY).then(val => {
+      if (!val) {
+        router.replace('/onboarding');
+      } else {
+        setOnboardingChecked(true);
+      }
+    }).catch(() => setOnboardingChecked(true));
+  }, []);
   const { colors, isDark, toggleTheme } = useTheme();
   const [view, setView] = useState<'system' | 'interval'>('system');
 
@@ -54,6 +67,8 @@ export default function HomeScreen() {
       .filter(g => g.items.length > 0);
   }, [records, view, colors]);
 
+  if (!onboardingChecked) return null;
+
   const openTask = (procedureId: string) => {
     startRun(procedureId);
     router.push(`/run/${procedureId}`);
@@ -72,6 +87,9 @@ export default function HomeScreen() {
           </View>
           <TouchableOpacity onPress={toggleTheme} hitSlop={12} style={s.themeBtn}>
             <Text style={[s.themeBtnText, { color: colors.inkDim }]}>{isDark ? '◑' : '◐'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/help')} hitSlop={12} style={s.helpBtn}>
+            <Text style={[s.helpBtnText, { color: colors.inkDim }]}>?</Text>
           </TouchableOpacity>
         </View>
 
@@ -221,6 +239,8 @@ function makeStyles(colors: ColorPalette) {
     brandSub:  { fontSize: 10.5, fontFamily: FONT_MONO, letterSpacing: 1 },
     themeBtn:      { padding: 6 },
     themeBtnText:  { fontSize: 20 },
+    helpBtn:       { width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
+    helpBtnText:   { fontSize: 14, fontWeight: '700', fontFamily: FONT_MONO },
 
     headerRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 22 },
     heading:   { fontSize: 21, fontWeight: '700', letterSpacing: -0.3 },
