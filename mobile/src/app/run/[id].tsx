@@ -17,7 +17,7 @@ import type { RunEntry } from '@/types';
 export default function RunnerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { records, activeRun, appendEntry, abandonRun } = useApp();
+  const { records, activeRun, appendEntry, abandonRun, escalateRun } = useApp();
   const { colors } = useTheme();
 
   const record = records.find(r => r.procedure.id === id);
@@ -54,6 +54,11 @@ export default function RunnerScreen() {
     } else {
       setStepIdx(i => i + 1);
     }
+  };
+
+  const handleEscalate = (entry: RunEntry) => {
+    appendEntry(entry);
+    router.push('/escalated');
   };
 
   const handleExit = () => {
@@ -102,7 +107,7 @@ export default function RunnerScreen() {
           <Text style={s.stepDetail}>{step.detail}</Text>
 
           <View style={s.checkpointArea}>
-            <Checkpoint step={step} onComplete={handleComplete} />
+            <Checkpoint step={step} onComplete={handleComplete} onEscalate={handleEscalate} />
           </View>
         </ScrollView>
 

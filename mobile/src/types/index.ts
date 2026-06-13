@@ -77,4 +77,5 @@ export interface CompletedRunRecord {
   flaggedCount: number;
   log: RunEntry[];
   techName?: string;
+  escalated?: boolean;
 }

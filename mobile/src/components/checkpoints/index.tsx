@@ -36,12 +36,20 @@ function ProceedButton({ enabled, label = 'Verify & continue', color = COLORS.ve
 
 type AckOutcome = 'none' | 'pass' | 'fail';
 
-function AckCheckpoint({ step, onComplete }: { step: AckStep; onComplete: (e: RunEntry) => void }) {
+function AckCheckpoint({ step, onComplete, onEscalate }: {
+  step: AckStep;
+  onComplete: (e: RunEntry) => void;
+  onEscalate?: (e: RunEntry) => void;
+}) {
   const { colors } = useTheme();
   const [outcome, setOutcome] = useState<AckOutcome>('none');
   const isHard = step.hard;
 
   const canProceed = outcome === 'pass' || (outcome === 'fail' && !isHard);
+  const escalateEntry: RunEntry = {
+    stepId: step.id, stepTitle: step.title, kind: 'ack',
+    value: `FAILED — ${step.ackLabel}`, flagged: true, ts: new Date(),
+  };
 
   return (
     <View>
@@ -89,8 +97,17 @@ function AckCheckpoint({ step, onComplete }: { step: AckStep; onComplete: (e: Ru
       {outcome === 'fail' && isHard && (
         <View style={[s.hardWarn, { borderColor: colors.hardstop, backgroundColor: 'rgba(255,92,92,0.08)' }]}>
           <Text style={[s.hardWarnText, { color: colors.hardstop }]}>
-            ⚑ HARD CHECKPOINT — this step must be resolved before you can proceed. Escalate per your facility incident procedure.
+            ⚑ HARD CHECKPOINT — this step must be resolved before you can proceed. Either fix the condition and select PASS, or log the failure and escalate to a supervisor.
           </Text>
+          {onEscalate && (
+            <TouchableOpacity
+              style={[s.escalateBtn, { borderColor: colors.hardstop }]}
+              onPress={() => onEscalate(escalateEntry)}
+              activeOpacity={0.85}
+            >
+              <Text style={[s.escalateBtnText, { color: colors.hardstop }]}>⚑ Log failure & escalate</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -247,9 +264,13 @@ function ScanCheckpoint({ step, onComplete }: { step: ScanStep; onComplete: (e: 
 
 // ─── Dispatch ────────────────────────────────────────────────────────────────
 
-export function Checkpoint({ step, onComplete }: { step: Step; onComplete: (e: RunEntry) => void }) {
+export function Checkpoint({ step, onComplete, onEscalate }: {
+  step: Step;
+  onComplete: (e: RunEntry) => void;
+  onEscalate?: (e: RunEntry) => void;
+}) {
   switch (step.kind) {
-    case 'ack':     return <AckCheckpoint     step={step} onComplete={onComplete} />;
+    case 'ack':     return <AckCheckpoint     step={step} onComplete={onComplete} onEscalate={onEscalate} />;
     case 'reading': return <ReadingCheckpoint step={step} onComplete={onComplete} />;
     case 'photo':   return <PhotoCheckpoint   step={step} onComplete={onComplete} />;
     case 'scan':    return <ScanCheckpoint    step={step} onComplete={onComplete} />;
@@ -270,8 +291,10 @@ const s = StyleSheet.create({
   ackLabel:        { fontSize: 14, fontWeight: '500', lineHeight: 20 },
   ackFailHint:     { fontSize: 12, fontFamily: FONT_MONO, lineHeight: 18 },
 
-  hardWarn:     { borderWidth: 1, borderRadius: 10, padding: 14, marginTop: 14 },
-  hardWarnText: { fontSize: 13, lineHeight: 20, fontWeight: '500' },
+  hardWarn:       { borderWidth: 1, borderRadius: 10, padding: 14, marginTop: 14, gap: 14 },
+  hardWarnText:   { fontSize: 13, lineHeight: 20, fontWeight: '500' },
+  escalateBtn:    { borderWidth: 1, borderRadius: 8, padding: 13, alignItems: 'center' },
+  escalateBtnText:{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
 
   rangeHint:    { fontFamily: FONT_MONO, fontSize: 12, marginTop: 10 },
 

@@ -28,6 +28,7 @@ type Action =
   | { type: 'START_RUN'; procedureId: string }
   | { type: 'APPEND_ENTRY'; entry: RunEntry }
   | { type: 'COMPLETE_RUN' }
+  | { type: 'ESCALATE_RUN' }
   | { type: 'ABANDON_RUN' }
   | { type: 'ADD_PROCEDURE'; procedure: Procedure }
   | { type: 'SET_TECH'; name: string };
@@ -80,6 +81,30 @@ function reducer(state: State, action: Action): State {
         completedRuns: [completedRunRecord, ...state.completedRuns],
       };
     }
+    case 'ESCALATE_RUN': {
+      if (!state.activeRun) return state;
+      const { activeRun } = state;
+      const completedAt = new Date();
+      const durationMins = Math.max(1, Math.round((completedAt.getTime() - activeRun.startedAt.getTime()) / 60_000));
+      const proc = state.records.find(r => r.procedure.id === activeRun.procedureId);
+      const escalatedRecord: CompletedRunRecord = {
+        id: `${activeRun.procedureId}-esc-${completedAt.getTime()}`,
+        procedureId: activeRun.procedureId,
+        procedureTitle: proc?.procedure.title ?? 'Unknown',
+        completedAt,
+        durationMins,
+        flaggedCount: activeRun.log.filter(e => e.flagged).length,
+        log: activeRun.log,
+        techName: state.techName,
+        escalated: true,
+      };
+      // interval is NOT reset — the task remains overdue and must be re-run once resolved
+      return {
+        ...state,
+        activeRun: null,
+        completedRuns: [escalatedRecord, ...state.completedRuns],
+      };
+    }
     case 'ABANDON_RUN':
       return { ...state, activeRun: null };
     case 'ADD_PROCEDURE':
@@ -103,6 +128,7 @@ interface ContextValue {
   startRun: (procedureId: string) => void;
   appendEntry: (entry: RunEntry) => void;
   completeRun: () => void;
+  escalateRun: () => void;
   abandonRun: () => void;
   addProcedure: (procedure: Procedure) => void;
   setTechName: (name: string) => void;
@@ -173,6 +199,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       startRun:     (procedureId) => dispatch({ type: 'START_RUN', procedureId }),
       appendEntry:  (entry)       => dispatch({ type: 'APPEND_ENTRY', entry }),
       completeRun:  ()            => dispatch({ type: 'COMPLETE_RUN' }),
+      escalateRun:  ()            => dispatch({ type: 'ESCALATE_RUN' }),
       abandonRun:   ()            => dispatch({ type: 'ABANDON_RUN' }),
       addProcedure: (procedure)   => dispatch({ type: 'ADD_PROCEDURE', procedure }),
       setTechName:  (name)        => dispatch({ type: 'SET_TECH', name }),

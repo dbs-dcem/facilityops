@@ -75,9 +75,16 @@ function RunCard({ run, expanded, colors, onToggle, onViewReport }: {
   return (
     <TouchableOpacity style={[s.card, expanded && s.cardExpanded]} onPress={onToggle} activeOpacity={0.85}>
       <View style={s.cardTop}>
-        <View style={[s.statusDot, { backgroundColor: run.flaggedCount > 0 ? colors.caution : colors.verify }]} />
+        <View style={[s.statusDot, { backgroundColor: run.escalated ? colors.hardstop : run.flaggedCount > 0 ? colors.caution : colors.verify }]} />
         <View style={s.cardInfo}>
-          <Text style={s.cardTitle} numberOfLines={expanded ? undefined : 2}>{run.procedureTitle}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <Text style={s.cardTitle} numberOfLines={expanded ? undefined : 2}>{run.procedureTitle}</Text>
+            {run.escalated && (
+              <View style={[s.escalatedTag, { borderColor: colors.hardstop }]}>
+                <Text style={[s.escalatedTagText, { color: colors.hardstop }]}>ESCALATED</Text>
+              </View>
+            )}
+          </View>
           <Text style={s.cardMeta}>{completedDate} · {completedTime}</Text>
         </View>
         <Text style={s.expandChevron}>{expanded ? '∧' : '∨'}</Text>
@@ -147,6 +154,8 @@ function makeStyles(colors: ColorPalette) {
 
     card:         { backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.line, borderRadius: 14, padding: 14, marginBottom: 10 },
     cardExpanded: { borderColor: colors.verifyDim },
+    escalatedTag:     { borderWidth: 1, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
+    escalatedTagText: { fontFamily: FONT_MONO, fontSize: 9, letterSpacing: 1, fontWeight: '700' },
     cardTop:      { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
     statusDot:    { width: 8, height: 8, borderRadius: 4, marginTop: 5 },
     cardInfo:     { flex: 1 },
