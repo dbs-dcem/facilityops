@@ -13,7 +13,7 @@ const SECTIONS = [
     items: [
       {
         q: 'What is a MOP?',
-        a: 'A Method of Procedure (MOP) is a written, step-by-step work instruction for a specific task — like checking a UPS or inspecting a generator. FacilityOps digitizes your MOPs so every run is guided, consistent, and logged.',
+        a: 'A Method of Procedure (MOP) is a written, step-by-step work instruction for a specific task — like checking a UPS or inspecting a generator. IRIS digitizes your MOPs so every run is guided, consistent, and logged.',
       },
       {
         q: 'How do I run a PM task?',
@@ -77,7 +77,7 @@ const SECTIONS = [
     items: [
       {
         q: 'Does the app work offline?',
-        a: 'Yes. FacilityOps is offline-first — data halls often have dead spots. All runs and logs are saved locally to the device and will sync with the server when a connection is available (backend sync is a future release).',
+        a: 'Yes. IRIS is offline-first — data halls often have dead spots. All runs and logs are saved locally to the device and will sync with the server when a connection is available (backend sync is a future release).',
       },
       {
         q: 'Will I lose data if I close the app mid-run?',
@@ -113,7 +113,7 @@ export default function HelpScreen() {
         </View>
 
         <Text style={s.screenTitle}>Help & FAQ</Text>
-        <Text style={s.subtitle}>Everything you need to know about FacilityOps.</Text>
+        <Text style={s.subtitle}>Everything you need to know about IRIS — Integrated Reliability & Inspection System.</Text>
 
         {SECTIONS.map(section => (
           <View key={section.heading} style={s.section}>
@@ -148,12 +148,12 @@ export default function HelpScreen() {
         <View style={s.contactBox}>
           <Text style={s.contactTitle}>Still have questions?</Text>
           <Text style={s.contactText}>
-            Contact your facility administrator or the FacilityOps team. During your pilot, your implementation partner can also add and refine procedures directly.
+            Contact your facility administrator or the IRIS team. During your pilot, your implementation partner can also add and refine procedures directly.
           </Text>
         </View>
 
         <View style={s.versionRow}>
-          <Text style={s.version}>FacilityOps · Phase 1 · Naples Edge Pilot</Text>
+          <Text style={s.version}>IRIS · MOP RUNNER · Phase 1 · Naples Edge Pilot</Text>
         </View>
 
       </ScrollView>

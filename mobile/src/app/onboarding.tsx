@@ -14,7 +14,7 @@ const SLIDES = [
   {
     icon: '⚡',
     title: 'Guided PM Execution',
-    body: 'FacilityOps turns your facility\'s MOPs and PM checklists into step-by-step, checkpoint-verified workflows — so nothing gets missed.',
+    body: 'IRIS turns your facility\'s MOPs and PM checklists into step-by-step, checkpoint-verified workflows — so nothing gets missed.',
   },
   {
     icon: '▶',

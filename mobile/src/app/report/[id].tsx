@@ -112,7 +112,7 @@ export default function ReportScreen() {
     lines.push('Reviewed by: ___________________________  Date: ____________');
     lines.push('');
     lines.push('─'.repeat(60));
-    lines.push(`FacilityOps · ${run.procedureId}${procedure?.version !== undefined ? ` · v${procedure.version}` : ''}`);
+    lines.push(`IRIS MOP RUNNER · ${run.procedureId}${procedure?.version !== undefined ? ` · v${procedure.version}` : ''}`);
     lines.push(`Generated: ${generatedAt}`);
     if (complianceRefs.length > 0) {
       lines.push(`Standards: ${complianceRefs.map(r => `${r.standard} ${r.section}`).join('; ')}`);
@@ -268,7 +268,7 @@ export default function ReportScreen() {
         <View style={s.divider} />
         <View style={s.docFooter}>
           <Text style={s.footerLine}>
-            FacilityOps · {run.procedureId}{procedure?.version !== undefined ? ` · v${procedure.version}` : ''} · {FACILITY}
+            IRIS MOP RUNNER · {run.procedureId}{procedure?.version !== undefined ? ` · v${procedure.version}` : ''} · {FACILITY}
           </Text>
           {complianceRefs.length > 0 && (
             <Text style={s.footerLine}>

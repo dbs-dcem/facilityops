@@ -118,7 +118,7 @@ export default function HomeScreen() {
         <View style={s.brand}>
           <View style={s.brandIcon}><View style={[s.brandDot, { backgroundColor: colors.verify }]} /></View>
           <View style={s.brandText}>
-            <Text style={[s.brandName, { color: colors.ink }]}>FacilityOps</Text>
+            <Text style={[s.brandName, { color: colors.ink }]}>IRIS</Text>
             <Text style={[s.brandSub, { color: colors.inkFaint }]}>MOP RUNNER</Text>
           </View>
 
