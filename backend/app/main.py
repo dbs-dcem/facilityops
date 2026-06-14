@@ -27,6 +27,22 @@ app.include_router(runs.router,        prefix=PREFIX)
 app.include_router(escalations.router, prefix=PREFIX)
 
 
+@app.get("/", tags=["health"])
+def root():
+    return {
+        "service": "FacilityOps API",
+        "version": "1.0.0",
+        "status": "ok",
+        "docs": "/docs",
+        "health": "/health",
+        "endpoints": {
+            "auth":        "/api/v1/auth/token",
+            "runs":        "/api/v1/runs",
+            "escalations": "/api/v1/escalations",
+        },
+    }
+
+
 @app.get("/health", tags=["health"])
 def health():
     return {"status": "ok", "service": "facilityops-api", "version": "1.0.0"}
