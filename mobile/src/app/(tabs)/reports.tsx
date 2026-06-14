@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useApp } from '@/context/AppContext';
@@ -7,7 +7,7 @@ import type { ProcedureRecord } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
 import type { ColorPalette } from '@/context/ThemeContext';
 import { FONT_MONO } from '@/constants/theme';
-import { INTERVAL_LABEL, INTERVAL_ORDER, SYSTEMS, sysInfoFor, statusFor } from '@/utils/dueStatus';
+import { INTERVAL_LABEL, INTERVAL_ORDER, SYSTEMS, sysInfoFor, statusFor, INTERVAL_DAYS } from '@/utils/dueStatus';
 import type { CompletedRunRecord } from '@/types';
 import type { SystemKey, IntervalKey } from '@/types';
 
@@ -40,6 +40,64 @@ function rangeMs(key: HistoryRange): number {
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
+function buildShareText(
+  report: ReportKind,
+  records: ProcedureRecord[],
+  completedRuns: CompletedRunRecord[],
+  histRange: HistoryRange,
+): string {
+  const line = '─'.repeat(48);
+  const now = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+
+  if (report === 'compliance') {
+    const statuses = records.map(r => statusFor(r.lastCompletedAt, r.procedure.interval));
+    const overdue  = statuses.filter(s => s.state === 'overdue').length;
+    const due      = statuses.filter(s => s.state === 'due').length;
+    const ok       = records.length - overdue - due;
+    const pct = (n: number) => records.length ? `${Math.round(n / records.length * 100)}%` : '—';
+    const lines = [
+      'I.R.I.S. — COMPLIANCE SUMMARY',
+      `Generated: ${now}`,
+      line,
+      `Total procedures : ${records.length}`,
+      `On Track         : ${ok}  (${pct(ok)})`,
+      `Due Soon         : ${due}  (${pct(due)})`,
+      `Overdue          : ${overdue}  (${pct(overdue)})`,
+      line,
+      'BY SYSTEM',
+      ...(Object.keys(SYSTEMS) as SystemKey[]).flatMap(key => {
+        const recs = records.filter(r => r.procedure.system === key);
+        if (!recs.length) return [];
+        const sts = recs.map(r => statusFor(r.lastCompletedAt, r.procedure.interval));
+        const ov = sts.filter(s => s.state === 'overdue').length;
+        const du = sts.filter(s => s.state === 'due').length;
+        return [`${SYSTEMS[key].label.padEnd(16)} ${recs.length - ov - du}/${recs.length} on track${ov ? `  ${ov} OVERDUE` : ''}`];
+      }),
+    ];
+    return lines.join('\n');
+  }
+
+  if (report === 'history') {
+    const cutoff   = Date.now() - rangeMs(histRange);
+    const filtered = completedRuns.filter(r => r.completedAt.getTime() >= cutoff);
+    const mins     = filtered.reduce((s, r) => s + r.durationMins, 0);
+    const lines = [
+      'I.R.I.S. — RUN HISTORY',
+      `Generated: ${now}  |  Range: ${HISTORY_RANGES.find(r => r.key === histRange)?.label}`,
+      line,
+      `Runs: ${filtered.length}  |  Total time: ${mins} min  |  Avg: ${filtered.length ? Math.round(mins / filtered.length) : '—'} min`,
+      `Flagged runs: ${filtered.filter(r => r.flaggedCount > 0).length}  |  Escalated: ${filtered.filter(r => r.escalated).length}`,
+      line,
+      ...filtered.map(r =>
+        `${r.completedAt.toLocaleDateString([], { month: 'short', day: 'numeric' })}  ${r.procedureTitle}  [${r.techName ?? '—'}]${r.escalated ? '  ESCALATED' : r.flaggedCount ? `  ${r.flaggedCount} flagged` : ''}`
+      ),
+    ];
+    return lines.join('\n');
+  }
+
+  return `I.R.I.S. Report — ${report}\nGenerated: ${now}`;
+}
+
 export default function ReportsScreen() {
   const { records, completedRuns } = useApp();
   const { colors } = useTheme();
@@ -48,11 +106,29 @@ export default function ReportsScreen() {
 
   const s = useMemo(() => makeStyles(colors), [colors]);
 
+  const canShare = report === 'compliance' || report === 'history';
+
+  const handleShare = async () => {
+    try {
+      const text = buildShareText(report, records, completedRuns, histRange);
+      await Share.share({ message: text, title: `I.R.I.S. ${REPORT_TABS.find(t => t.kind === report)?.label}` });
+    } catch {
+      Alert.alert('Share unavailable', 'Could not open the share sheet on this device.');
+    }
+  };
+
   return (
     <SafeAreaView style={s.root}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        <Text style={s.screenTitle}>Reports</Text>
+        <View style={s.titleRow}>
+          <Text style={s.screenTitle}>Reports</Text>
+          {canShare && (
+            <TouchableOpacity onPress={handleShare} hitSlop={12} style={[s.shareBtn, { borderColor: colors.verify }]}>
+              <Text style={[s.shareBtnText, { color: colors.verify }]}>↑ Share</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* report type picker */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabScroll} contentContainerStyle={s.tabRow}>
@@ -389,7 +465,10 @@ function makeStyles(colors: ColorPalette) {
     root:   { flex: 1, backgroundColor: colors.bg },
     scroll: { padding: 18, paddingBottom: 48 },
 
-    screenTitle: { color: colors.ink, fontSize: 21, fontWeight: '700', letterSpacing: -0.3, marginBottom: 16 },
+    titleRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+    screenTitle: { color: colors.ink, fontSize: 21, fontWeight: '700', letterSpacing: -0.3 },
+    shareBtn:    { borderWidth: 1, borderRadius: 7, paddingHorizontal: 10, paddingVertical: 5 },
+    shareBtnText:{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: '700' },
 
     tabScroll: { marginBottom: 20 },
     tabRow:    { flexDirection: 'row', gap: 8 },

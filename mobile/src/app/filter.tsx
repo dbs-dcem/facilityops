@@ -23,7 +23,7 @@ const FILTER_META: Record<FilterState, { title: string; color: keyof ColorPalett
 export default function FilterScreen() {
   const router = useRouter();
   const { state, system } = useLocalSearchParams<{ state?: FilterState; system?: SystemKey }>();
-  const { records, startRun } = useApp();
+  const { records, startRun, quickComplete } = useApp();
   const { colors } = useTheme();
 
   const filterState: FilterState = (state as FilterState) || 'all';
@@ -83,6 +83,7 @@ export default function FilterScreen() {
             showSystem={!!filterSystem}
             colors={colors}
             onPress={() => openTask(r.procedure.id)}
+            onQuickComplete={() => quickComplete(r.procedure.id)}
           />
         ))}
 

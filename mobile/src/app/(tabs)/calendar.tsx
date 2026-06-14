@@ -21,7 +21,7 @@ function getNextDue(r: ProcedureRecord): Date {
 
 export default function CalendarScreen() {
   const router = useRouter();
-  const { records, startRun } = useApp();
+  const { records, startRun, quickComplete } = useApp();
   const { colors } = useTheme();
   const [calView, setCalView] = useState<'list' | 'grid'>('list');
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -136,6 +136,7 @@ export default function CalendarScreen() {
                     showSystem
                     colors={colors}
                     onPress={() => openTask(r.procedure.id)}
+                    onQuickComplete={() => quickComplete(r.procedure.id)}
                   />
                 ))}
               </View>
@@ -212,6 +213,7 @@ export default function CalendarScreen() {
                     showSystem
                     colors={colors}
                     onPress={() => openTask(r.procedure.id)}
+                    onQuickComplete={() => quickComplete(r.procedure.id)}
                   />
                 ))}
               </View>

@@ -31,6 +31,7 @@ type Action =
   | { type: 'ESCALATE_RUN' }
   | { type: 'ABANDON_RUN' }
   | { type: 'ADD_PROCEDURE'; procedure: Procedure }
+  | { type: 'QUICK_COMPLETE'; procedureId: string }
   | { type: 'SET_TECH'; name: string };
 
 function reducer(state: State, action: Action): State {
@@ -113,6 +114,28 @@ function reducer(state: State, action: Action): State {
         customProcedures: [...state.customProcedures, action.procedure],
         records: [...state.records, { procedure: action.procedure, lastCompletedAt: null }],
       };
+    case 'QUICK_COMPLETE': {
+      const proc = state.records.find(r => r.procedure.id === action.procedureId);
+      if (!proc) return state;
+      const completedAt = new Date();
+      const quickRecord: CompletedRunRecord = {
+        id: `${action.procedureId}-quick-${completedAt.getTime()}`,
+        procedureId: action.procedureId,
+        procedureTitle: proc.procedure.title,
+        completedAt,
+        durationMins: 0,
+        flaggedCount: 0,
+        log: [],
+        techName: state.techName,
+      };
+      return {
+        ...state,
+        records: state.records.map(r =>
+          r.procedure.id === action.procedureId ? { ...r, lastCompletedAt: completedAt } : r,
+        ),
+        completedRuns: [quickRecord, ...state.completedRuns],
+      };
+    }
     case 'SET_TECH':
       return { ...state, techName: action.name };
     default:
@@ -131,6 +154,7 @@ interface ContextValue {
   escalateRun: () => void;
   abandonRun: () => void;
   addProcedure: (procedure: Procedure) => void;
+  quickComplete: (procedureId: string) => void;
   setTechName: (name: string) => void;
 }
 
@@ -201,8 +225,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       completeRun:  ()            => dispatch({ type: 'COMPLETE_RUN' }),
       escalateRun:  ()            => dispatch({ type: 'ESCALATE_RUN' }),
       abandonRun:   ()            => dispatch({ type: 'ABANDON_RUN' }),
-      addProcedure: (procedure)   => dispatch({ type: 'ADD_PROCEDURE', procedure }),
-      setTechName:  (name)        => dispatch({ type: 'SET_TECH', name }),
+      addProcedure:  (procedure)   => dispatch({ type: 'ADD_PROCEDURE', procedure }),
+      quickComplete: (procedureId) => dispatch({ type: 'QUICK_COMPLETE', procedureId }),
+      setTechName:   (name)        => dispatch({ type: 'SET_TECH', name }),
     }}>
       {children}
     </AppContext.Provider>

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useApp } from '@/context/AppContext';
@@ -19,7 +19,7 @@ const FACILITY = 'Naples Edge — Hall B';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { records, completedRuns, startRun, techName, setTechName } = useApp();
+  const { records, completedRuns, startRun, quickComplete, techName, setTechName } = useApp();
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [showTechModal, setShowTechModal] = useState(false);
   const [techDraft, setTechDraft] = useState('');
@@ -297,6 +297,7 @@ export default function HomeScreen() {
                     showSystem
                     colors={colors}
                     onPress={() => openTask(r.procedure.id)}
+                    onQuickComplete={() => quickComplete(r.procedure.id)}
                   />
                 ))}
             </View>
@@ -311,16 +312,28 @@ export default function HomeScreen() {
 
 // ─── TaskCard ────────────────────────────────────────────────────────────────
 
-export function TaskCard({ record, showSystem, onPress, colors }: {
+export function TaskCard({ record, showSystem, onPress, onQuickComplete, colors }: {
   record: ReturnType<typeof useApp>['records'][number];
   showSystem: boolean;
   onPress: () => void;
+  onQuickComplete?: () => void;
   colors: ColorPalette;
 }) {
   const { procedure, lastCompletedAt } = record;
   const st  = statusFor(lastCompletedAt, procedure.interval);
   const sm  = STATUS_META[st.state];
   const sys = sysInfoFor(procedure);
+
+  const handleLongPress = onQuickComplete ? () => {
+    Alert.alert(
+      'Log Completion',
+      `Mark "${procedure.title}" as completed now without running the guided steps?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Mark Complete', onPress: onQuickComplete },
+      ],
+    );
+  } : undefined;
 
   return (
     <TouchableOpacity
@@ -329,6 +342,8 @@ export function TaskCard({ record, showSystem, onPress, colors }: {
         st.state === 'overdue' && { borderColor: 'rgba(255,92,92,0.4)' },
       ]}
       onPress={onPress}
+      onLongPress={handleLongPress}
+      delayLongPress={500}
       activeOpacity={0.85}
     >
       <View style={{ width: 3, alignSelf: 'stretch', borderRadius: 3, backgroundColor: sm.color }} />
