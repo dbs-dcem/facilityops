@@ -31,7 +31,7 @@ const INTERVALS: IntervalKey[] = ['daily', 'weekly', 'monthly', 'quarterly', 'an
 const INTERVAL_LABELS: Record<IntervalKey, string> = {
   daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', quarterly: 'Quarterly', annual: 'Annual',
 };
-const SYSTEMS_KEYS = Object.keys(SYSTEMS) as SystemKey[];
+const SYSTEMS_KEYS: SystemKey[] = ['power', 'cooling', 'fire', 'env', 'custom'];
 
 function blankStep(): FormStep {
   return { uid: String(Date.now() + Math.random()), kind: 'ack', title: '', detail: '', hard: false, ackLabel: '', unit: '', rangeMin: '', rangeMax: '', expectedTag: '' };
@@ -60,6 +60,7 @@ export default function NewMOPScreen() {
   const [title, setTitle] = useState('');
   const [assetLabel, setAssetLabel] = useState('');
   const [system, setSystem] = useState<SystemKey>('power');
+  const [customSystemLabel, setCustomSystemLabel] = useState('');
   const [interval, setInterval] = useState<IntervalKey>('monthly');
   const [riskStatement, setRiskStatement] = useState('');
   const [steps, setSteps] = useState<FormStep[]>([blankStep()]);
@@ -72,6 +73,7 @@ export default function NewMOPScreen() {
   const handleSave = () => {
     if (!title.trim()) { Alert.alert('Required', 'Procedure title is required.'); return; }
     if (!assetLabel.trim()) { Alert.alert('Required', 'Asset label is required.'); return; }
+    if (system === 'custom' && !customSystemLabel.trim()) { Alert.alert('Required', 'Custom system name is required.'); return; }
     if (steps.some(s => !s.title.trim())) { Alert.alert('Required', 'All steps must have a title.'); return; }
 
     const pid = `CUSTOM-${Date.now()}`;
@@ -80,6 +82,7 @@ export default function NewMOPScreen() {
       title: title.trim(),
       assetLabel: assetLabel.trim(),
       system,
+      ...(system === 'custom' && { systemLabel: customSystemLabel.trim() }),
       interval,
       riskStatement: riskStatement.trim(),
       version: 1,
@@ -129,6 +132,16 @@ export default function NewMOPScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+            {system === 'custom' && (
+              <TextInput
+                style={[s.input, { marginTop: 10 }]}
+                value={customSystemLabel}
+                onChangeText={setCustomSystemLabel}
+                placeholder="System name (e.g. Security, Electrical)"
+                placeholderTextColor={colors.inkFaint}
+                autoCapitalize="words"
+              />
+            )}
           </Field>
 
           <Field label="INTERVAL" colors={colors}>

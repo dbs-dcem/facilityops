@@ -5,7 +5,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { FONT_MONO } from '@/constants/theme';
 
 const TAB_ICONS: Record<string, string> = {
-  index: '⌂', calendar: '◫', library: '≡', logs: '◉',
+  index: '⌂', calendar: '◫', library: '≡', logs: '◉', reports: '▣',
 };
 
 function TabIcon({ name, color }: { name: string; color: ColorValue }) {
@@ -32,6 +32,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="calendar" options={{ title: 'Calendar', tabBarIcon: ({ color }) => <TabIcon name="calendar" color={color} /> }} />
       <Tabs.Screen name="library"  options={{ title: 'Library',  tabBarIcon: ({ color }) => <TabIcon name="library"  color={color} /> }} />
       <Tabs.Screen name="logs"     options={{ title: 'Logs',     tabBarIcon: ({ color }) => <TabIcon name="logs"     color={color} /> }} />
+      <Tabs.Screen name="reports"  options={{ title: 'Reports',  tabBarIcon: ({ color }) => <TabIcon name="reports"  color={color} /> }} />
     </Tabs>
   );
 }

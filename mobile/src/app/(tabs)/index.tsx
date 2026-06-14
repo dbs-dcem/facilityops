@@ -11,7 +11,7 @@ import { FONT_MONO } from '@/constants/theme';
 import type { IntervalKey, SystemKey } from '@/types';
 import {
   INTERVAL_LABEL, INTERVAL_ORDER, STATUS_META, SYSTEMS,
-  dueLabel, statusFor,
+  dueLabel, statusFor, sysInfoFor,
 } from '@/utils/dueStatus';
 import { ONBOARDING_KEY } from '../onboarding';
 
@@ -80,13 +80,15 @@ export default function HomeScreen() {
   const onTrackCount  = records.length - overdueCount - dueCount;
 
   const systemTileData = useMemo(() =>
-    (Object.keys(SYSTEMS) as SystemKey[]).map(key => {
-      const sysRecords  = records.filter(r => r.procedure.system === key);
-      const sysStatuses = sysRecords.map(r => statusFor(r.lastCompletedAt, r.procedure.interval));
-      const sysOverdue  = sysStatuses.filter(s => s.state === 'overdue').length;
-      const sysDue      = sysStatuses.filter(s => s.state === 'due').length;
-      return { key, ...SYSTEMS[key], count: sysRecords.length, sysOverdue, sysDue };
-    }),
+    (Object.keys(SYSTEMS) as SystemKey[])
+      .map(key => {
+        const sysRecords  = records.filter(r => r.procedure.system === key);
+        const sysStatuses = sysRecords.map(r => statusFor(r.lastCompletedAt, r.procedure.interval));
+        const sysOverdue  = sysStatuses.filter(s => s.state === 'overdue').length;
+        const sysDue      = sysStatuses.filter(s => s.state === 'due').length;
+        return { key, ...SYSTEMS[key], count: sysRecords.length, sysOverdue, sysDue };
+      })
+      .filter(t => t.count > 0),
     [records],
   );
 
@@ -318,7 +320,7 @@ export function TaskCard({ record, showSystem, onPress, colors }: {
   const { procedure, lastCompletedAt } = record;
   const st  = statusFor(lastCompletedAt, procedure.interval);
   const sm  = STATUS_META[st.state];
-  const sys = SYSTEMS[procedure.system];
+  const sys = sysInfoFor(procedure);
 
   return (
     <TouchableOpacity

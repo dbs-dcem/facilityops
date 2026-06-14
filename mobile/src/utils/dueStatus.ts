@@ -1,4 +1,4 @@
-import type { DueState, DueStatus, IntervalKey, SystemKey } from '../types';
+import type { DueState, DueStatus, IntervalKey, Procedure, SystemKey } from '../types';
 
 export const INTERVAL_DAYS: Record<IntervalKey, number> = {
   daily: 1, weekly: 7, monthly: 30, quarterly: 91, annual: 365,
@@ -15,7 +15,13 @@ export const SYSTEMS: Record<SystemKey, { label: string; color: string; glyph: s
   cooling: { label: 'Cooling',       color: '#5BAEF0', glyph: '❄' },
   fire:    { label: 'Fire & Safety', color: '#FF5C5C', glyph: '◉' },
   env:     { label: 'Environmental', color: '#3DDC97', glyph: '▦' },
+  custom:  { label: 'Custom',        color: '#8A99A6', glyph: '◈' },
 };
+
+export function sysInfoFor(p: Pick<Procedure, 'system' | 'systemLabel'>): { label: string; color: string; glyph: string } {
+  if (p.system === 'custom') return { label: p.systemLabel ?? 'Custom', color: '#8A99A6', glyph: '◈' };
+  return SYSTEMS[p.system];
+}
 
 export const STATUS_META: Record<DueState, { color: string; label: string }> = {
   overdue: { color: '#FF5C5C', label: 'OVERDUE' },

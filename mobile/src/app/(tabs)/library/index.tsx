@@ -7,7 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
 import type { ColorPalette } from '@/context/ThemeContext';
 import { FONT_MONO } from '@/constants/theme';
-import { INTERVAL_LABEL, SYSTEMS } from '@/utils/dueStatus';
+import { INTERVAL_LABEL, sysInfoFor } from '@/utils/dueStatus';
 
 export default function LibraryScreen() {
   const router = useRouter();
@@ -45,7 +45,7 @@ export default function LibraryScreen() {
 
         {filtered.map(r => {
           const { procedure } = r;
-          const sys = SYSTEMS[procedure.system];
+          const sys = sysInfoFor(procedure);
           return (
             <TouchableOpacity
               key={procedure.id}

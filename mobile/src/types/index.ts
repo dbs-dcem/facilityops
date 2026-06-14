@@ -1,4 +1,4 @@
-export type SystemKey = 'power' | 'cooling' | 'fire' | 'env';
+export type SystemKey = 'power' | 'cooling' | 'fire' | 'env' | 'custom';
 export type IntervalKey = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'annual';
 export type StepKind = 'ack' | 'reading' | 'photo' | 'scan';
 export type RunStatus = 'in_progress' | 'complete' | 'abandoned';
@@ -37,6 +37,7 @@ export interface Procedure {
   title: string;
   assetLabel: string;
   system: SystemKey;
+  systemLabel?: string;
   interval: IntervalKey;
   riskStatement: string;
   version: number;

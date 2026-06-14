@@ -7,7 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
 import type { ColorPalette } from '@/context/ThemeContext';
 import { FONT_MONO } from '@/constants/theme';
-import { INTERVAL_LABEL, SYSTEMS } from '@/utils/dueStatus';
+import { INTERVAL_LABEL, sysInfoFor } from '@/utils/dueStatus';
 import type { Step } from '@/types';
 
 const KIND_META: Record<Step['kind'], { label: string; glyph: string }> = {
@@ -36,7 +36,7 @@ export default function ProcedureDetailScreen() {
     );
   }
 
-  const sys = SYSTEMS[procedure.system];
+  const sys = sysInfoFor(procedure);
 
   const handleRun = () => {
     startRun(procedure.id);
