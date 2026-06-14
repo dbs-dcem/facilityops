@@ -75,8 +75,20 @@ export default function HomeScreen() {
     [records],
   );
 
-  const overdueCount = statuses.filter(s => s.state === 'overdue').length;
-  const dueCount     = statuses.filter(s => s.state === 'due').length;
+  const overdueCount  = statuses.filter(s => s.state === 'overdue').length;
+  const dueCount      = statuses.filter(s => s.state === 'due').length;
+  const onTrackCount  = records.length - overdueCount - dueCount;
+
+  const systemTileData = useMemo(() =>
+    (Object.keys(SYSTEMS) as SystemKey[]).map(key => {
+      const sysRecords  = records.filter(r => r.procedure.system === key);
+      const sysStatuses = sysRecords.map(r => statusFor(r.lastCompletedAt, r.procedure.interval));
+      const sysOverdue  = sysStatuses.filter(s => s.state === 'overdue').length;
+      const sysDue      = sysStatuses.filter(s => s.state === 'due').length;
+      return { key, ...SYSTEMS[key], count: sysRecords.length, sysOverdue, sysDue };
+    }),
+    [records],
+  );
 
   const groups = useMemo(() => {
     if (view === 'system') {
@@ -118,7 +130,8 @@ export default function HomeScreen() {
         <View style={s.brand}>
           <View style={s.brandIcon}><View style={[s.brandDot, { backgroundColor: colors.verify }]} /></View>
           <View style={s.brandText}>
-            <Text style={[s.brandName, { color: colors.ink }]}>IRIS</Text>
+            <Text style={[s.brandName, { color: colors.ink }]}>I.R.I.S.</Text>
+            <Text style={[s.brandExpansion, { color: colors.inkFaint }]}>INTEGRATED RELIABILITY & INSPECTION SYSTEM</Text>
             <Text style={[s.brandSub, { color: colors.inkFaint }]}>MOP RUNNER</Text>
           </View>
 
@@ -176,16 +189,16 @@ export default function HomeScreen() {
         {/* stat tiles — clickable */}
         <View style={s.statRow}>
           <StatCard
-            label="Overdue" value={overdueCount} alert colors={colors}
+            label="Overdue" sub="past due date" value={overdueCount} alert colors={colors}
             onPress={() => router.push({ pathname: '/filter', params: { state: 'overdue' } })}
           />
           <StatCard
-            label="Due soon" value={dueCount} caution colors={colors}
+            label="Due Soon" sub="within 7 days" value={dueCount} caution colors={colors}
             onPress={() => router.push({ pathname: '/filter', params: { state: 'due' } })}
           />
           <StatCard
-            label="Tracked" value={records.length} colors={colors}
-            onPress={() => router.push({ pathname: '/filter', params: { state: 'all' } })}
+            label="On Track" sub="all others" value={onTrackCount} colors={colors}
+            onPress={() => router.push({ pathname: '/filter', params: { state: 'ok' } })}
           />
         </View>
 
@@ -223,32 +236,70 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        {/* groups */}
-        {groups.map(g => (
-          <View key={g.key} style={s.group}>
-            <View style={s.groupHeader}>
-              {g.glyph ? <Text style={[s.groupGlyph, { color: g.color }]}>{g.glyph}</Text> : null}
-              <Text style={[s.groupLabel, { color: g.color }]}>{g.label.toUpperCase()}</Text>
-              <View style={[s.groupLine, { backgroundColor: colors.line }]} />
-              <Text style={[s.groupCount, { color: colors.inkFaint }]}>{g.items.length}</Text>
-            </View>
-            {g.items
-              .slice()
-              .sort((a, b) =>
-                statusFor(a.lastCompletedAt, a.procedure.interval).remaining -
-                statusFor(b.lastCompletedAt, b.procedure.interval).remaining
-              )
-              .map(r => (
-                <TaskCard
-                  key={r.procedure.id}
-                  record={r}
-                  showSystem={view === 'interval'}
-                  colors={colors}
-                  onPress={() => openTask(r.procedure.id)}
-                />
-              ))}
+        {/* system tiles or interval groups */}
+        {view === 'system' ? (
+          <View style={s.systemGrid}>
+            {systemTileData.map(tile => {
+              const borderCol = tile.sysOverdue > 0 ? colors.hardstop : tile.sysDue > 0 ? colors.caution : colors.verifyDim;
+              return (
+                <TouchableOpacity
+                  key={tile.key}
+                  style={[s.systemTile, { borderColor: borderCol }]}
+                  onPress={() => router.push({ pathname: '/filter', params: { system: tile.key } })}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[s.systemTileGlyph, { color: tile.color }]}>{tile.glyph}</Text>
+                  <Text style={[s.systemTileName, { color: colors.ink }]}>{tile.label}</Text>
+                  <Text style={[s.systemTileCount, { color: colors.inkFaint }]}>
+                    {tile.count} procedure{tile.count !== 1 ? 's' : ''}
+                  </Text>
+                  {tile.sysOverdue > 0 || tile.sysDue > 0 ? (
+                    <View style={s.systemTileStatusRow}>
+                      {tile.sysOverdue > 0 && (
+                        <Text style={[s.systemTileStatusText, { color: colors.hardstop }]}>
+                          {tile.sysOverdue} overdue
+                        </Text>
+                      )}
+                      {tile.sysDue > 0 && (
+                        <Text style={[s.systemTileStatusText, { color: colors.caution }]}>
+                          {tile.sysDue} due soon
+                        </Text>
+                      )}
+                    </View>
+                  ) : (
+                    <Text style={[s.systemTileStatusText, { color: colors.verify }]}>All on track</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
-        ))}
+        ) : (
+          groups.map(g => (
+            <View key={g.key} style={s.group}>
+              <View style={s.groupHeader}>
+                {g.glyph ? <Text style={[s.groupGlyph, { color: g.color }]}>{g.glyph}</Text> : null}
+                <Text style={[s.groupLabel, { color: g.color }]}>{g.label.toUpperCase()}</Text>
+                <View style={[s.groupLine, { backgroundColor: colors.line }]} />
+                <Text style={[s.groupCount, { color: colors.inkFaint }]}>{g.items.length}</Text>
+              </View>
+              {g.items
+                .slice()
+                .sort((a, b) =>
+                  statusFor(a.lastCompletedAt, a.procedure.interval).remaining -
+                  statusFor(b.lastCompletedAt, b.procedure.interval).remaining
+                )
+                .map(r => (
+                  <TaskCard
+                    key={r.procedure.id}
+                    record={r}
+                    showSystem
+                    colors={colors}
+                    onPress={() => openTask(r.procedure.id)}
+                  />
+                ))}
+            </View>
+          ))
+        )}
 
         <Text style={[s.footer, { color: colors.inkFaint }]}>offline-ready · syncs when reconnected</Text>
       </ScrollView>
@@ -299,8 +350,8 @@ export function TaskCard({ record, showSystem, onPress, colors }: {
 
 // ─── StatCard ────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, alert, caution, onPress, colors }: {
-  label: string; value: number; alert?: boolean; caution?: boolean;
+function StatCard({ label, sub, value, alert, caution, onPress, colors }: {
+  label: string; sub: string; value: number; alert?: boolean; caution?: boolean;
   onPress: () => void; colors: ColorPalette;
 }) {
   const col = alert && value > 0 ? colors.hardstop : caution && value > 0 ? colors.caution : colors.ink;
@@ -311,7 +362,8 @@ function StatCard({ label, value, alert, caution, onPress, colors }: {
       activeOpacity={0.75}
     >
       <Text style={{ fontSize: 21, fontFamily: FONT_MONO, fontWeight: '600', color: col }}>{value}</Text>
-      <Text style={{ color: colors.inkFaint, fontSize: 10.5, marginTop: 3 }}>{label}</Text>
+      <Text style={{ color: colors.inkFaint, fontSize: 10.5, marginTop: 2, fontWeight: '600' }}>{label}</Text>
+      <Text style={{ color: colors.inkFaint, fontSize: 9.5, fontFamily: FONT_MONO, marginTop: 1, opacity: 0.7 }}>{sub}</Text>
     </TouchableOpacity>
   );
 }
@@ -327,8 +379,9 @@ function makeStyles(colors: ColorPalette) {
     brandIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: colors.panelHi, borderWidth: 1, borderColor: colors.verifyDim, alignItems: 'center', justifyContent: 'center' },
     brandDot:  { width: 13, height: 13, borderRadius: 3 },
     brandText: { flex: 1 },
-    brandName: { fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
-    brandSub:  { fontSize: 10.5, fontFamily: FONT_MONO, letterSpacing: 1 },
+    brandName:      { fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
+    brandExpansion: { fontSize: 7.5, fontFamily: FONT_MONO, letterSpacing: 0.3, marginTop: 1, opacity: 0.6 },
+    brandSub:       { fontSize: 10.5, fontFamily: FONT_MONO, letterSpacing: 1 },
     techBadge:    { width: 30, height: 30, borderRadius: 15, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
     techInitials: { fontFamily: FONT_MONO, fontSize: 11, fontWeight: '700' },
 
@@ -373,6 +426,14 @@ function makeStyles(colors: ColorPalette) {
     groupLabel:  { fontFamily: FONT_MONO, fontSize: 11, letterSpacing: 1.5 },
     groupLine:   { flex: 1, height: 1 },
     groupCount:  { fontFamily: FONT_MONO, fontSize: 11 },
+
+    systemGrid:            { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
+    systemTile:            { width: '48%', borderWidth: 2, borderRadius: 14, padding: 16, backgroundColor: colors.panel, gap: 4 },
+    systemTileGlyph:       { fontSize: 26, marginBottom: 2 },
+    systemTileName:        { fontSize: 14, fontWeight: '700' },
+    systemTileCount:       { fontFamily: FONT_MONO, fontSize: 10, marginTop: 1 },
+    systemTileStatusRow:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+    systemTileStatusText:  { fontFamily: FONT_MONO, fontSize: 10, fontWeight: '700' },
 
     footer: { textAlign: 'center', marginTop: 28, fontFamily: FONT_MONO, fontSize: 11 },
   });
